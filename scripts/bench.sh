@@ -11,6 +11,7 @@ libs=(
   "urllib3"
   "httpx"
   "rnet"
+  "ry"
   "niquests"
 )
 for lib in "${libs[@]}"; do
