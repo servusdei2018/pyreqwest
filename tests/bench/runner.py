@@ -265,11 +265,6 @@ class Runner:
             https_only=True,
             # TODO: next version of ry will use `tls_certs_merge` kwarg not `root_certificates`
             root_certificates=[ry.Certificate.from_der(self.ca_cert.der)],
-            # These are the defaults but could be disabled for benchmarking:
-            brotli=True,
-            deflate=True,
-            gzip=True,
-            zstd=True,
         )
         if len(body) <= self.full_consume_size_limit:
             async def post_read() -> None:
