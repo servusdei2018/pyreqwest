@@ -69,7 +69,7 @@ macro_rules! set_config_check_init {
         let mut config = RuntimeConfig::write()?;
         if config.$name != $value && config.multithreaded_initialized {
             return Err(PyRuntimeError::new_err(
-                "Multi-threaded runtime config can not be changed after the runtime has been initialized",
+                "Multi-threaded runtime config can not be changed after the multi-threaded runtime has been initialized",
             ));
         }
         config.$name = $value;
