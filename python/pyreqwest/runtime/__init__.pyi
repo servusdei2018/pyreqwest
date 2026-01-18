@@ -18,7 +18,7 @@ def runtime_max_blocking_threads(threads: int | None) -> None:
     Should be configured at startup. Can not be changed after multithreaded runtime has been initialized.
     """
 
-def runtime_blocking_thread_keep_alive(seconds: timedelta | None) -> None:
+def runtime_blocking_thread_keep_alive(duration: timedelta | None) -> None:
     """Set the keep-alive time for blocking threads in the multithreaded runtime. None uses default Tokio behavior.
 
     Should be configured at startup. Can not be changed after multithreaded runtime has been initialized.

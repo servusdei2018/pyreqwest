@@ -29,19 +29,22 @@ impl Url {
     }
 
     #[staticmethod]
-    fn parse_with_params(url: UrlType, query: QueryParams) -> PyResult<Self> {
+    fn parse_with_params(url: UrlType, params: QueryParams) -> PyResult<Self> {
         let mut url = url.0;
-        Self::extend_query_inner(&mut url, Some(query))?;
+        Self::extend_query_inner(&mut url, Some(params))?;
         Ok(Url::from(url))
     }
 
     #[staticmethod]
-    pub fn is_valid(raw: &str) -> bool {
-        url::Url::parse(raw).is_ok()
+    pub fn is_valid(value: &str) -> bool {
+        url::Url::parse(value).is_ok()
     }
 
-    pub fn join(&self, input: &str) -> PyResult<Self> {
-        let url = self.url.join(input).map_err(|e| PyValueError::new_err(e.to_string()))?;
+    pub fn join(&self, join_input: &str) -> PyResult<Self> {
+        let url = self
+            .url
+            .join(join_input)
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(Url::new(url))
     }
 
@@ -252,8 +255,8 @@ impl Url {
         Url::new(self.url.clone())
     }
 
-    fn __truediv__(&self, other: &str) -> PyResult<Self> {
-        self.join(other)
+    fn __truediv__(&self, join_input: &str) -> PyResult<Self> {
+        self.join(join_input)
     }
 
     fn __str__<'py>(&self, py: Python<'py>) -> Bound<'py, PyString> {

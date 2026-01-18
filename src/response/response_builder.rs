@@ -39,10 +39,10 @@ impl ResponseBuilder {
         Ok(slf)
     }
 
-    fn header(mut slf: PyRefMut<Self>, name: HeaderName, value: HeaderValue) -> PyResult<PyRefMut<Self>> {
+    fn header(mut slf: PyRefMut<Self>, key: HeaderName, value: HeaderValue) -> PyResult<PyRefMut<Self>> {
         let head = slf.mut_head()?;
         head.headers
-            .try_append(name.0, value.0)
+            .try_append(key.0, value.0)
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(slf)
     }
@@ -53,8 +53,8 @@ impl ResponseBuilder {
         Ok(slf)
     }
 
-    fn extensions(mut slf: PyRefMut<Self>, value: Extensions) -> PyRefMut<Self> {
-        slf.extensions = Some(value);
+    fn extensions(mut slf: PyRefMut<Self>, extensions: Extensions) -> PyRefMut<Self> {
+        slf.extensions = Some(extensions);
         slf
     }
 
@@ -68,8 +68,8 @@ impl ResponseBuilder {
         Ok(slf)
     }
 
-    fn body_json<'py>(mut slf: PyRefMut<'py, Self>, data: JsonValue, py: Python<'py>) -> PyResult<PyRefMut<'py, Self>> {
-        let bytes = py.detach(|| serde_json::to_vec(&data).map_err(|e| PyValueError::new_err(e.to_string())))?;
+    fn body_json<'py>(mut slf: PyRefMut<'py, Self>, body: JsonValue, py: Python<'py>) -> PyResult<PyRefMut<'py, Self>> {
+        let bytes = py.detach(|| serde_json::to_vec(&body).map_err(|e| PyValueError::new_err(e.to_string())))?;
         slf.body = Some(RequestBody::from(Bytes::from(bytes)));
         slf.mut_head()?
             .headers

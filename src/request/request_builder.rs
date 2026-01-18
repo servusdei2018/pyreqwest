@@ -188,9 +188,10 @@ impl SyncOneOffRequestBuilder {
 
 #[pymethods]
 impl BaseRequestBuilder {
-    fn error_for_status(mut slf: PyRefMut<Self>, value: bool) -> PyResult<PyRefMut<Self>> {
+    #[pyo3(signature = (enable=true))]
+    fn error_for_status(mut slf: PyRefMut<Self>, enable: bool) -> PyResult<PyRefMut<Self>> {
         slf.check_inner()?;
-        slf.error_for_status = value;
+        slf.error_for_status = enable;
         Ok(slf)
     }
 
@@ -222,14 +223,14 @@ impl BaseRequestBuilder {
         Ok(slf)
     }
 
-    fn body_json<'py>(mut slf: PyRefMut<'py, Self>, data: Py<PyAny>, py: Python) -> PyResult<PyRefMut<'py, Self>> {
+    fn body_json<'py>(mut slf: PyRefMut<'py, Self>, body: Py<PyAny>) -> PyResult<PyRefMut<'py, Self>> {
         slf.check_inner()?;
         let bytes = if let Some(handler) = slf.json_handler.as_ref()
             && handler.has_dumps()
         {
-            handler.call_dumps(py, JsonDumpsContext { data })?
+            handler.call_dumps(slf.py(), JsonDumpsContext { data: body })?
         } else {
-            let json_val: JsonValue = data.bind(py).extract()?;
+            let json_val: JsonValue = body.bind(slf.py()).extract()?;
             slf.py().detach(|| {
                 serde_json::to_vec(&json_val)
                     .map(Bytes::from)

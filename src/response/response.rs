@@ -117,12 +117,12 @@ impl BaseResponse {
         Err(StatusError::from_custom(msg, json!({"status": inner.status.0.as_u16()})))
     }
 
-    fn get_header(&self, name: &str) -> PyResult<Option<HeaderValue>> {
-        self.get_header_inner(name)
+    fn get_header(&self, key: &str) -> PyResult<Option<HeaderValue>> {
+        self.get_header_inner(key)
     }
 
-    fn get_header_all(&self, name: &str) -> PyResult<Vec<HeaderValue>> {
-        self.get_header_all_inner(name)
+    fn get_header_all(&self, key: &str) -> PyResult<Vec<HeaderValue>> {
+        self.get_header_all_inner(key)
     }
 
     fn content_type_mime(&self, py: Python) -> PyResult<Option<Mime>> {
@@ -228,17 +228,17 @@ impl BaseResponse {
             .ok_or_else(|| PyRuntimeError::new_err("Response body reader is closed"))
     }
 
-    fn get_header_inner(&self, name: &str) -> PyResult<Option<HeaderValue>> {
+    fn get_header_inner(&self, key: &str) -> PyResult<Option<HeaderValue>> {
         match self.ref_inner()?.headers {
-            RespHeaders::Headers(ref headers) => headers.get_one(name),
-            RespHeaders::PyHeaders(ref py_headers) => py_headers.get().get_one(name),
+            RespHeaders::Headers(ref headers) => headers.get_one(key),
+            RespHeaders::PyHeaders(ref py_headers) => py_headers.get().get_one(key),
         }
     }
 
-    fn get_header_all_inner(&self, name: &str) -> PyResult<Vec<HeaderValue>> {
+    fn get_header_all_inner(&self, key: &str) -> PyResult<Vec<HeaderValue>> {
         match self.ref_inner()?.headers {
-            RespHeaders::Headers(ref headers) => headers.get_all(name),
-            RespHeaders::PyHeaders(ref py_headers) => py_headers.get().get_all(name),
+            RespHeaders::Headers(ref headers) => headers.get_all(key),
+            RespHeaders::PyHeaders(ref py_headers) => py_headers.get().get_all(key),
         }
     }
 

@@ -123,7 +123,7 @@ class RequestBody:
         """Copy body (Zero-copied bytes. Stream supplies its own copy)."""
 
 class BaseRequestBuilder:
-    def error_for_status(self, enable: bool) -> Self:
+    def error_for_status(self, enable: bool = True) -> Self:
         """Enable automatic HTTP error raising (4xx/5xx)."""
 
     def header(self, name: str, value: str) -> Self:

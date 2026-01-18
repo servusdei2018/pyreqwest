@@ -138,12 +138,13 @@ impl Request {
     }
 
     // :NOCOV_START
+    #[allow(unused_variables)]
     #[classmethod]
     pub fn from_request_and_body(
-        _cls: &Bound<'_, PyType>,
-        _py: Python,
-        _request: Bound<PyAny>,
-        _body: Option<Bound<RequestBody>>,
+        cls: &Bound<'_, PyType>,
+        py: Python,
+        request: Bound<PyAny>,
+        body: Option<Bound<RequestBody>>,
     ) -> PyResult<Self> {
         Err(PyNotImplementedError::new_err("Should be implemented in a subclass"))
     } // :NOCOV_END

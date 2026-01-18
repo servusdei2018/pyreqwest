@@ -49,12 +49,12 @@ pub struct SyncClientBuilder;
 
 #[pymethods]
 impl BaseClientBuilder {
-    fn base_url(mut slf: PyRefMut<Self>, base_url: UrlType) -> PyResult<PyRefMut<Self>> {
-        if !base_url.0.as_str().ends_with('/') {
+    fn base_url(mut slf: PyRefMut<Self>, url: UrlType) -> PyResult<PyRefMut<Self>> {
+        if !url.0.as_str().ends_with('/') {
             return Err(PyValueError::new_err("base_url must end with a trailing slash '/'"));
         }
         slf.check_inner()?;
-        slf.base_url = Some(base_url.into());
+        slf.base_url = Some(url.into());
         Ok(slf)
     }
 
@@ -70,9 +70,10 @@ impl BaseClientBuilder {
         Ok(slf)
     }
 
-    fn error_for_status(mut slf: PyRefMut<Self>, value: bool) -> PyResult<PyRefMut<Self>> {
+    #[pyo3(signature = (enable=true))]
+    fn error_for_status(mut slf: PyRefMut<Self>, enable: bool) -> PyResult<PyRefMut<Self>> {
         slf.check_inner()?;
-        slf.error_for_status = value;
+        slf.error_for_status = enable;
         Ok(slf)
     }
 
@@ -256,8 +257,9 @@ impl BaseClientBuilder {
         Self::apply(slf, false, |builder| Ok(builder.interface(value.as_str())))
     }
 
+    #[allow(unused_variables)]
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    fn interface(_slf: PyRefMut<Self>, _value: String) -> PyResult<PyRefMut<Self>> {
+    fn interface(slf: PyRefMut<Self>, value: String) -> PyResult<PyRefMut<Self>> {
         Err(PyValueError::new_err("interface is not supported on this platform"))
     } // :NOCOV_END
 
@@ -279,8 +281,9 @@ impl BaseClientBuilder {
         Self::apply(slf, false, |builder| Ok(builder.tcp_user_timeout(timeout)))
     }
 
+    #[allow(unused_variables)]
     #[cfg(not(target_os = "linux"))]
-    fn tcp_user_timeout(_slf: PyRefMut<Self>, _timeout: Option<Duration>) -> PyResult<PyRefMut<Self>> {
+    fn tcp_user_timeout(slf: PyRefMut<Self>, timeout: Option<Duration>) -> PyResult<PyRefMut<Self>> {
         Err(PyValueError::new_err("tcp_user_timeout is not supported on this platform"))
     } // :NOCOV_END
 

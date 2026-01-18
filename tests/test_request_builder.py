@@ -32,13 +32,21 @@ async def test_build_streamed(client: Client, echo_body_parts_server: Subprocess
         assert (await resp.text()) == sent
 
 
-@pytest.mark.parametrize("value", [True, False])
-async def test_error_for_status(echo_server: SubprocessServer, value: bool):
+@pytest.mark.parametrize("value", [True, False, None])
+@pytest.mark.parametrize("kwarg", [True, False])
+async def test_error_for_status(echo_server: SubprocessServer, value: bool | None, kwarg: bool):
     url = echo_server.url.with_query({"status": 400})
 
     async with ClientBuilder().error_for_status(False).build() as client:
-        req = client.get(url).error_for_status(value).build()
-        if value:
+        if value is None:
+            req_builder = client.get(url).error_for_status()
+        else:
+            req_builder = (
+                client.get(url).error_for_status(enable=value) if kwarg else client.get(url).error_for_status(value)
+            )
+
+        req = req_builder.build()
+        if value or value is None:
             with pytest.raises(StatusError) as e:
                 await req.send()
             assert e.value.details and e.value.details["status"] == 400

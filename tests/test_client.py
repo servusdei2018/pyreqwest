@@ -60,13 +60,18 @@ async def test_base_url(echo_server: SubprocessServer):
         ClientBuilder().base_url(echo_server.url / "bad")
 
 
-@pytest.mark.parametrize("value", [True, False])
-async def test_error_for_status(echo_server: SubprocessServer, value: bool):
+@pytest.mark.parametrize("value", [True, False, None])
+@pytest.mark.parametrize("kwarg", [True, False])
+async def test_error_for_status(echo_server: SubprocessServer, value: bool | None, kwarg: bool):
     url = echo_server.url.with_query({"status": 400})
+    if value is None:
+        builder = ClientBuilder().error_for_status()
+    else:
+        builder = ClientBuilder().error_for_status(enable=value) if kwarg else ClientBuilder().error_for_status(value)
 
-    async with ClientBuilder().error_for_status(value).build() as client:
+    async with builder.build() as client:
         req = client.get(url).build()
-        if value:
+        if value or value is None:
             with pytest.raises(StatusError) as e:
                 await req.send()
             assert e.value.details

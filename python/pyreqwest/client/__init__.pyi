@@ -114,7 +114,7 @@ class BaseClientBuilder:
     def max_connections(self, max_connections: int | None) -> Self:
         """Maximum number of inflight requests. None means no limit. Default is None."""
 
-    def error_for_status(self, enable: bool) -> Self:
+    def error_for_status(self, enable: bool = True) -> Self:
         """Enable automatic HTTP error raising (4xx/5xx)."""
 
     def user_agent(self, value: str) -> Self:

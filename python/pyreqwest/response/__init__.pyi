@@ -101,13 +101,13 @@ class ResponseBuilder:
     def build_sync(self) -> SyncResponse:
         """Build synchronous response (disallows async streams)."""
 
-    def status(self, value: int) -> Self:
+    def status(self, status: int) -> Self:
         """Set status code."""
 
-    def version(self, value: str) -> Self:
+    def version(self, version: str) -> Self:
         """Set HTTP version string."""
 
-    def header(self, name: str, value: str) -> Self:
+    def header(self, key: str, value: str) -> Self:
         """Append single header value (multiple allowed)."""
 
     def headers(self, headers: HeadersType) -> Self:
