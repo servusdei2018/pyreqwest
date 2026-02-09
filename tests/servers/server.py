@@ -1,5 +1,4 @@
 import asyncio
-import json
 import queue
 import random
 import socket
@@ -7,7 +6,6 @@ import time
 from asyncio import AbstractEventLoop
 from collections.abc import AsyncGenerator, AsyncIterable, Awaitable, Callable
 from contextlib import asynccontextmanager, closing, suppress
-from dataclasses import dataclass
 from datetime import timedelta
 from functools import cached_property
 from pathlib import Path
@@ -16,37 +14,18 @@ from typing import Any, Protocol, Self
 
 from granian.constants import HTTPModes, Interfaces
 from granian.server.embed import Server as GranianServer
+from pydantic import BaseModel
 from pyreqwest.client import ClientBuilder
 from pyreqwest.http import Url
 
 from tests.utils import wait_for
 
 
-@dataclass(kw_only=True, frozen=True)
-class ServerConfig:
+class ServerConfig(BaseModel, frozen=True):
     ssl_cert: Path | None = None
     ssl_key: Path | None = None
     ssl_ca: Path | None = None
     http: HTTPModes = HTTPModes.auto
-
-    @classmethod
-    def parse_json(cls, raw: str) -> Self:
-        data = json.loads(raw)
-        return cls(
-            ssl_cert=Path(data["ssl_cert"]) if data.get("ssl_cert") else None,
-            ssl_key=Path(data["ssl_key"]) if data.get("ssl_key") else None,
-            ssl_ca=Path(data["ssl_ca"]) if data.get("ssl_ca") else None,
-            http=HTTPModes(data.get("http", HTTPModes.auto.value)),
-        )
-
-    def dump_json(self) -> str:
-        data = {
-            "ssl_cert": str(self.ssl_cert) if self.ssl_cert else None,
-            "ssl_key": str(self.ssl_key) if self.ssl_key else None,
-            "ssl_ca": str(self.ssl_ca) if self.ssl_ca else None,
-            "http": self.http.value,
-        }
-        return json.dumps(data)
 
     @property
     def is_https(self) -> bool:
@@ -100,8 +79,8 @@ class EmbeddedServer(GranianServer):
             await wait_for_server(self.url, ca_pem=self.config.ca_pem_bytes)
             yield self
         finally:
-            server_loop_chan.get(timeout=5).call_soon_threadsafe(self.stop)
-            server_thread.join(timeout=5)
+            server_loop_chan.get(timeout=10).call_soon_threadsafe(self.stop)
+            server_thread.join(timeout=10)
             assert not server_thread.is_alive()
 
 
@@ -112,12 +91,11 @@ def is_port_free(port: int) -> bool:
     return False
 
 
-def find_free_port(*, not_in_ports: set[int] | None = None, timeout: timedelta = timedelta(seconds=5)) -> int:
-    not_in_ports = not_in_ports or set()
+def find_free_port(timeout: timedelta = timedelta(seconds=5)) -> int:
     deadline = time.monotonic() + timeout.total_seconds()
     while True:
         port = random.randint(49152, 60999)
-        if port not in not_in_ports and is_port_free(port):
+        if is_port_free(port):
             return port
         if time.monotonic() > deadline:
             raise TimeoutError("Could not find a free port")
@@ -133,7 +111,7 @@ async def receive_all(receive: Callable[[], Awaitable[dict[str, Any]]]) -> Async
         more_body = message.get("more_body", False)
 
 
-async def wait_for_server(url: Url, ca_pem: bytes | None, success_timeout: timedelta = timedelta(seconds=10)) -> None:
+async def wait_for_server(url: Url, ca_pem: bytes | None, timeout: timedelta = timedelta(seconds=10)) -> None:
     if url.scheme == "https":
         assert ca_pem
 
@@ -142,4 +120,4 @@ async def wait_for_server(url: Url, ca_pem: bytes | None, success_timeout: timed
         builder = builder.add_root_certificate_pem(ca_pem)
 
     async with builder.build() as client:
-        await wait_for(lambda: client.get(url).build().send(), success_timeout)
+        await wait_for(lambda: client.get(url).build().send(), timeout)

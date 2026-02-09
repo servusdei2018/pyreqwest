@@ -24,10 +24,16 @@ class SubprocessServer:
             "tests.servers.server_subprocess",
             f"{server_type.__module__}.{server_type.__name__}",
             str(port),
-            config.dump_json(),
+            config.model_dump_json(),
         )
         server = SubprocessServer(server_type, config, port, process)
-        await wait_for_server(server.url, ca_pem=config.ca_pem_bytes)
+
+        try:
+            await wait_for_server(server.url, ca_pem=config.ca_pem_bytes)
+        except Exception:
+            await server.kill()
+            raise
+
         assert server.running
         return server
 
@@ -58,6 +64,6 @@ if __name__ == "__main__":
     asgi_class = getattr(importlib.import_module(module_path), class_name)
 
     port = int(sys.argv[2])
-    config = ServerConfig.parse_json(sys.argv[3])
+    config = ServerConfig.model_validate_json(sys.argv[3])
 
     asyncio.run(EmbeddedServer(asgi_class(), port, config).serve())

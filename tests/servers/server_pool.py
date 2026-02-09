@@ -4,6 +4,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Self
 
+from tests.utils import wait_for
+
 from .server import ASGIApp, ServerConfig, find_free_port
 from .server_subprocess import SubprocessServer
 
@@ -11,11 +13,10 @@ from .server_subprocess import SubprocessServer
 class ServerPool:
     def __init__(self) -> None:
         self._pools: dict[tuple[type[ASGIApp], str], asyncio.Queue[SubprocessServer]] = defaultdict(asyncio.Queue)
-        self._ports: set[int] = set()
 
     @asynccontextmanager
     async def use_server(self, server_type: type[ASGIApp], config: ServerConfig) -> AsyncGenerator[SubprocessServer]:
-        pool = self._pools[(server_type, config.dump_json())]
+        pool = self._pools[(server_type, config.model_dump_json())]
 
         server = await self._pop_server(pool, server_type, config)
         try:
@@ -32,7 +33,7 @@ class ServerPool:
         await self._check_count(pool, server_type, config)
 
         while True:
-            server = await asyncio.wait_for(pool.get(), timeout=4.0)
+            server = await asyncio.wait_for(pool.get(), timeout=10)
             if server.running:
                 return server
             await self._check_count(pool, server_type, config)
@@ -45,15 +46,13 @@ class ServerPool:
                 await self._start_new(pool, server_type, config)
 
     async def _start_new(
-        self,
-        pool: asyncio.Queue[SubprocessServer],
-        server_type: type[ASGIApp],
-        config: ServerConfig,
-        port: int | None = None,
+        self, pool: asyncio.Queue[SubprocessServer], server_type: type[ASGIApp], config: ServerConfig
     ) -> None:
-        port = port or find_free_port(not_in_ports=self._ports)
-        self._ports.add(port)
-        await pool.put(await SubprocessServer.start(server_type, config, port))
+        async def start_server() -> SubprocessServer:
+            port = find_free_port()
+            return await SubprocessServer.start(server_type, config, port)
+
+        await pool.put(await wait_for(start_server))
 
     async def __aenter__(self) -> Self:
         return self

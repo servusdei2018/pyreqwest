@@ -152,6 +152,7 @@ max-args = 8
     "T201",
     "SLF001",
     "PLC0415",
+    "ASYNC109",
 ]
 "./tests/bench/*" = ["T201", "EM102", "PLC0415", "TC002"]
 "./examples/*" = ["D104", "T201", "TRY003", "EM101", "PLR2004", "PT017", "PLC0415"]
