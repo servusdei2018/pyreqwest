@@ -27,6 +27,9 @@ class EchoServer:
         if query_dict.get("echo_only_body") == "1":
             resp_body = b"".join([b async for b in receive_all(receive)])
             resp_headers = [[b"content-type", b"application/octet-stream"]]
+        elif echo_param := query_dict.get("echo_param"):
+            resp_body = echo_param.encode()
+            resp_headers = [[b"content-type", b"text/plain"]]
         else:
             resp = {
                 "headers": scope["headers"],
@@ -40,10 +43,9 @@ class EchoServer:
                 "time": datetime.now(UTC).isoformat(),
             }
             resp_body = json_dump(resp)
-            resp_headers = [
-                [b"content-type", b"application/json"],
-                [b"x-request-method", scope["method"].encode()],
-            ]
+            resp_headers = [[b"content-type", b"application/json"]]
+
+        resp_headers.append([b"x-request-method", scope["method"].encode()])
 
         if query_dict.get("compress") in ("gzip", "gzip_invalid"):
             resp_body = gzip.compress(resp_body)
@@ -65,6 +67,9 @@ class EchoServer:
                 "headers": resp_headers,
             },
         )
+
+        if query_dict.get("empty_body") == "1":
+            resp_body = b""
 
         if sleep_body := float(query_dict.get("sleep_body", 0)):
             part1, part2 = resp_body[: len(resp_body) // 2], resp_body[len(resp_body) // 2 :]

@@ -4,6 +4,7 @@ use crate::exceptions::{ClientClosedError, PoolTimeoutError};
 use crate::logging::logger::flush_logs_no_gil;
 use crate::request::RequestData;
 use crate::response::BaseResponse;
+use crate::response::internal::BodyConsumeConfig;
 use crate::runtime::RuntimeHandle;
 use pyo3::coroutine::CancelHandle;
 use pyo3::prelude::*;
@@ -47,6 +48,11 @@ impl Spawner {
                 connection_verbose: request.connection_verbose,
             };
 
+            let mut read_config = request.body_consume_config;
+            if request.reqwest.method() == reqwest::Method::HEAD {
+                read_config = BodyConsumeConfig::NoBody;
+            }
+
             let mut resp = client.execute(request.reqwest).await.map_err(map_send_error)?;
 
             if let Some(extensions) = request.extensions {
@@ -56,7 +62,7 @@ impl Spawner {
             BaseResponse::initialize(
                 resp,
                 Some(request_permit),
-                request.body_consume_config,
+                read_config,
                 runtime,
                 request.json_handler,
                 request.error_for_status,

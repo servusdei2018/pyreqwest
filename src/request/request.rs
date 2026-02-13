@@ -134,6 +134,7 @@ impl Request {
             BodyConsumeConfig::FullyConsumed => {
                 Err(PyRuntimeError::new_err("Expected streamed request, found fully consumed request"))
             }
+            BodyConsumeConfig::NoBody => Err(PyRuntimeError::new_err("Unexpected config")),
         }
     }
 

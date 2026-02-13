@@ -28,18 +28,14 @@ impl BodyReader {
         read_config: BodyConsumeConfig,
         runtime: RuntimeHandle,
     ) -> PyResult<(Self, http::response::Parts)> {
-        let buffer_limit = match read_config {
-            BodyConsumeConfig::FullyConsumed => None,
-            BodyConsumeConfig::Streamed(cfg) => Some(cfg.read_buffer_limit),
-        };
-
-        let (init_chunks, has_more) = Self::read_limit(&mut response, buffer_limit).await?;
+        let (init_chunks, has_more) = Self::read_limit(&mut response, read_config).await?;
         let (head, body) = Self::response_parts(response);
 
         let mut body_receiver: Option<Receiver> = None;
-        if let Some(buffer_limit) = buffer_limit {
+        if let BodyConsumeConfig::Streamed(config) = read_config {
             if has_more {
-                body_receiver = Some(Reader::start(body, request_permit.take(), buffer_limit, runtime.clone()));
+                body_receiver =
+                    Some(Reader::start(body, request_permit.take(), config.read_buffer_limit, runtime.clone()));
             }
         } else {
             assert!(!has_more, "Should have fully consumed the response");
@@ -179,8 +175,13 @@ impl BodyReader {
 
     async fn read_limit(
         response: &mut reqwest::Response,
-        byte_limit: Option<usize>,
+        read_config: BodyConsumeConfig,
     ) -> PyResult<(VecDeque<Bytes>, bool)> {
+        let byte_limit = match read_config {
+            BodyConsumeConfig::FullyConsumed => None,
+            BodyConsumeConfig::Streamed(cfg) => Some(cfg.read_buffer_limit),
+            BodyConsumeConfig::NoBody => return Ok((VecDeque::new(), false)),
+        };
         if byte_limit == Some(0) {
             return Ok((VecDeque::new(), true));
         }
@@ -316,6 +317,7 @@ impl Reader {
 pub enum BodyConsumeConfig {
     FullyConsumed,
     Streamed(StreamedReadConfig),
+    NoBody,
 }
 
 #[derive(Debug, Clone, Copy)]

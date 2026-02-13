@@ -264,6 +264,23 @@ async def test_response_compression(echo_server: SubprocessServer):
         assert accepts == {"deflate", "br", "zstd"}
 
 
+@pytest.mark.parametrize("resp_body", ["", "not empty"])
+@pytest.mark.parametrize("compress", [False, True])
+@pytest.mark.parametrize("http2", [False, True])
+async def test_head_response_body(
+    https_echo_server: SubprocessServer, cert_authority: trustme.CA, resp_body: str, compress: bool, http2: bool
+):
+    cert_pem = cert_authority.cert_pem.bytes()
+    async with ClientBuilder().http2(http2).add_root_certificate_pem(cert_pem).build() as client:
+        url = https_echo_server.url.with_query({"compress": "gzip"}) if compress else https_echo_server.url
+        url = url.extend_query({"echo_param": resp_body}) if resp_body else url.extend_query({"empty_body": "1"})
+
+        resp = await client.head(url).build().send()
+        assert resp.status == 200
+        assert resp.headers.get("x-content-encoding") == ("gzip" if compress else None)
+        assert (await resp.bytes()) == b""
+
+
 @pytest.mark.parametrize("str_url", [False, True])
 async def test_http_methods(echo_server: SubprocessServer, str_url: bool):
     url = str(echo_server.url) if str_url else echo_server.url
