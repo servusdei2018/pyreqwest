@@ -508,7 +508,6 @@ async def test_various_builder_functions(
         .brotli(False)
         .zstd(False)
         .deflate(False)
-        .max_redirects(1)
         .referer(True)
         .no_proxy()
         .pool_idle_timeout(timedelta(seconds=1))
@@ -566,12 +565,25 @@ async def test_resolve(echo_server: SubprocessServer):
         assert resp.status == 200
 
 
+@pytest.mark.parametrize("enable", [True, False])
+async def test_follow_redirects(echo_server: SubprocessServer, enable: bool):
+    url = echo_server.url.with_query({"status": 302, "header_location": "/redirect"})
+
+    async with ClientBuilder().follow_redirects(enable=enable).error_for_status(True).build() as client:
+        resp = await client.get(url).build().send()
+        if enable:
+            assert (await resp.json())["path"] == "/redirect"
+            assert resp.status == 200
+        else:
+            assert (await resp.json())["path"] == "/"
+            assert resp.status == 302
+
+
 async def test_max_redirects(echo_server: SubprocessServer):
     url = echo_server.url.with_query({"status": 302, "header_location": "/redirect"})
 
     async with ClientBuilder().max_redirects(1).error_for_status(True).build() as client:
-        req = client.get(url).build()
-        resp = await req.send()
+        resp = await client.get(url).build().send()
         assert (await resp.json())["path"] == "/redirect"
         assert resp.status == 200
 

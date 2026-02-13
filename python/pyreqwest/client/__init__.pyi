@@ -143,6 +143,9 @@ class BaseClientBuilder:
     def deflate(self, enable: bool) -> Self:
         """Enable auto deflate decompression. Default is true."""
 
+    def follow_redirects(self, enable: bool) -> Self:
+        """Enable automatic following of HTTP redirects. Default is to follow redirects."""
+
     def max_redirects(self, max_redirects: int) -> Self:
         """Set maximum number of followed redirects. Default will follow redirects up to a maximum of 10."""
 

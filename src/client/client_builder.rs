@@ -111,6 +111,14 @@ impl BaseClientBuilder {
         Self::apply(slf, false, |builder| Ok(builder.deflate(enable)))
     }
 
+    fn follow_redirects(slf: PyRefMut<Self>, enable: bool) -> PyResult<PyRefMut<Self>> {
+        let policy = match enable {
+            true => redirect::Policy::default(),
+            false => redirect::Policy::none(),
+        };
+        Self::apply(slf, false, |builder| Ok(builder.redirect(policy)))
+    }
+
     fn max_redirects(slf: PyRefMut<Self>, max_redirects: usize) -> PyResult<PyRefMut<Self>> {
         Self::apply(slf, false, |builder| Ok(builder.redirect(redirect::Policy::limited(max_redirects))))
     }
