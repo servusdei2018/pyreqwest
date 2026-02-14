@@ -15,6 +15,7 @@ libs=(
   "rnet"
   "ry"
   "niquests"
+  "curl_cffi"
 )
 for lib in "${libs[@]}"; do
   uv run python -m tests.bench.latency --lib "$lib"

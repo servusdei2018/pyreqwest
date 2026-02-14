@@ -42,18 +42,20 @@ class Runner:
             return self.run_sync_pyreqwest_concurrent(body, concurrency, multithreaded=False)
         if lib == "pyreqwest_sync_mt":
             return self.run_sync_pyreqwest_concurrent(body, concurrency, multithreaded=True)
+        if lib == "urllib3":
+            return self.run_urllib3_concurrent(body, concurrency)
         if lib == "aiohttp":
             return await self.run_aiohttp_concurrent(body, concurrency)
         if lib == "httpx":
             return await self.run_httpx_concurrent(body, concurrency)
-        if lib == "urllib3":
-            return self.run_urllib3_concurrent(body, concurrency)
         if lib == "rnet":
             return await self.run_rnet_concurrent(body, concurrency)
-        if lib == "ry":
-            return await self.run_ry_concurrent(body, concurrency)
         if lib == "niquests":
             return await self.run_niquests_concurrent(body, concurrency)
+        if lib == "ry":
+            return await self.run_ry_concurrent(body, concurrency)
+        if lib == "curl_cffi":
+            return await self.run_curl_cffi_concurrent(body, concurrency)
         raise ValueError(f"Unsupported comparison library: {lib}")
 
     async def meas_concurrent_batch(
@@ -332,3 +334,23 @@ class Runner:
                     assert tot == len(body)
 
             return await self.meas_concurrent_batch(post_read, len(body), concurrency)
+
+    async def run_curl_cffi_concurrent(self, body: bytes, concurrency: int) -> list[float]:
+        import curl_cffi
+
+        url_str = str(self.url)
+
+        # No support for custom CA certs, so verify=False
+        async with curl_cffi.AsyncSession(verify=False, max_clients=concurrency) as session:
+            if len(body) <= self.full_consume_size_limit:
+
+                async def post_read() -> None:
+                    response = await session.post(url_str, data=body)
+                    assert response.status_code == 200
+                    assert len(response.content) == len(body)
+
+                return await self.meas_concurrent_batch(post_read, len(body), concurrency)
+            # curl_cffi is very limited, so can not benchmark compare large bodies streaming:
+            # - no support for streaming request bodies
+            # - no support for chunk size limits on response body streaming
+            return []

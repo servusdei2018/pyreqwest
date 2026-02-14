@@ -6,6 +6,7 @@
 - [rnet (async)](#rnet)
 - [niquests (async)](#niquests)
 - [ry (async)](#ry)
+- [curl_cffi (async)](#curl_cffi)
 
 In graphs `pyreqwest (st)` uses single-threaded and `pyreqwest (mt)` multi-threaded [runtime](./performance.md#async-runtime).
 
@@ -45,20 +46,27 @@ In graphs `pyreqwest (st)` uses single-threaded and `pyreqwest (mt)` multi-threa
     <img width="1200" alt="result" src="https://raw.githubusercontent.com/MarkusSintonen/pyreqwest/refs/heads/main/tests/bench/benchmark_ry.png" />
 </p>
 
+### Compared to [curl_cffi](https://github.com/lexiforest/curl_cffi) (async) <a name="curl_cffi" id="curl_cffi"></a>
+
+<p align="center">
+    <img width="1200" alt="result" src="https://raw.githubusercontent.com/MarkusSintonen/pyreqwest/refs/heads/main/tests/bench/benchmark_curl_cffi.png" />
+</p>
+
 ---
 
 ## GC pressure
 
-| Library (mode)    | Total Collections | Total Collected |
-|-------------------|-------------------|-----------------|
-| pyreqwest (async) | 22                | 0               |
-| pyreqwest (sync)  | 25                | 0               |
-| ry (async)        | 39                | 0               |
-| rnet (async)      | 40                | 0               |
-| aiohttp (async)   | 377               | 3978            |
-| urllib3 (sync)    | 427               | 821689          |
-| httpx (async)     | 772               | 1347560         |
-| niquests (async)  | 1260              | 2667198         |
+| Library (mode)    | Total Collections  | Total Collected  |
+|-------------------|--------------------|------------------|
+| pyreqwest (async) | 22                 | 0                |
+| pyreqwest (sync)  | 25                 | 0                |
+| ry (async)        | 39                 | 0                |
+| rnet (async)      | 40                 | 0                |
+| curl_cffi (async) | 62                 | 120              |
+| aiohttp (async)   | 377                | 3978             |
+| urllib3 (sync)    | 427                | 821689           |
+| httpx (async)     | 772                | 1347560          |
+| niquests (async)  | 1260               | 2667198          |
 
 ---
 

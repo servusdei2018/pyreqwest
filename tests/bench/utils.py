@@ -14,8 +14,8 @@ class Stats(BaseModel):
     timings: list[float]
 
     @property
-    def mean(self) -> float:
-        return statistics.mean(self.timings)
+    def median(self) -> float:
+        return statistics.median(self.timings) if self.timings else 0
 
 
 class StatsCollection(BaseModel):

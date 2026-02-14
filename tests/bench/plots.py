@@ -27,10 +27,10 @@ def create_plot(collection: StatsCollection, comparison_lib: str) -> None:
             pyreqwest_st_stats = collection.find(f"{self_lib}_st", body_size, concurrency)
             pyreqwest_mt_stats = collection.find(f"{self_lib}_mt", body_size, concurrency)
             comparison_stats = collection.find(comparison_lib, body_size, concurrency)
-            pyreqwest_mean = min(pyreqwest_st_stats.mean, pyreqwest_mt_stats.mean)
+            pyreqwest_median = min(pyreqwest_st_stats.median, pyreqwest_mt_stats.median)
 
             stats = [pyreqwest_st_stats.timings, pyreqwest_mt_stats.timings, comparison_stats.timings]
-            means = [pyreqwest_st_stats.mean, pyreqwest_mt_stats.mean, comparison_stats.mean]
+            medians = [pyreqwest_st_stats.median, pyreqwest_mt_stats.median, comparison_stats.median]
             labels = ["pyreqwest (st)", "pyreqwest (mt)", comparison_lib]
 
             box_plot = ax.boxplot(stats, patch_artist=True, showfliers=False, tick_labels=labels, widths=0.6)
@@ -46,15 +46,19 @@ def create_plot(collection: StatsCollection, comparison_lib: str) -> None:
             ax.set_ylabel("Response Time (ms)")
             ax.grid(True, alpha=0.3)
 
-            speedup = comparison_stats.mean / pyreqwest_mean if pyreqwest_mean != 0 else 0
-            faster_lib = "pyreqwest" if speedup > 1 else comparison_lib
-            pct_diff = (speedup - 1) * 100 if speedup > 1 else (1 / speedup - 1) * 100
+            if comparison_stats.median:
+                speedup = comparison_stats.median / pyreqwest_median if pyreqwest_median != 0 else 0
+                faster_lib = "pyreqwest" if speedup > 1 else comparison_lib
+                pct_diff = (speedup - 1) * 100 if speedup > 1 else (1 / speedup - 1) * 100
+                annotation = f"{faster_lib}\n{pct_diff:.1f}% faster"
+            else:
+                annotation = "NOT POSSIBLE TO BENCHMARK"
 
             # Add performance annotation
             ax.text(
                 0.5,
                 0.95,
-                f"{faster_lib}\n{pct_diff:.1f}% faster",
+                annotation,
                 transform=ax.transAxes,
                 ha="center",
                 va="top",
@@ -63,18 +67,19 @@ def create_plot(collection: StatsCollection, comparison_lib: str) -> None:
                 fontweight="bold",
             )
 
-            # Add mean time annotations
-            for i_mean, mean in enumerate(means):
-                ax.text(
-                    i_mean + 1,
-                    mean,
-                    f"{mean:.3f}ms",
-                    ha="left",
-                    va="center",
-                    fontsize=8,
-                    color="darkred" if i_mean == len(means) - 1 else "darkblue",
-                    fontweight="bold",
-                )
+            # Add median time annotations
+            for i_median, median in enumerate(medians):
+                if median:
+                    ax.text(
+                        i_median + 1,
+                        median,
+                        f"{median:.3f}ms",
+                        ha="left",
+                        va="center",
+                        fontsize=8,
+                        color="darkred" if i_median == len(medians) - 1 else "darkblue",
+                        fontweight="bold",
+                    )
 
         for j, _ in enumerate(concurrency_levels):
             axes[i][j].set_ylim(ymin=0, ymax=ymax * 1.01)  # Uniform y-axis per row

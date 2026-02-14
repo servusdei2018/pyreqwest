@@ -48,7 +48,10 @@ class PerformanceLatency:
                 for concurrency in self.concurrency_levels:
                     timings = await self.runner.run_lib(self.lib, body, concurrency)
                     results.append((len(body), concurrency, timings))
-                    print(f"{self.lib} average: {(sum(timings) / len(timings)):.4f}ms\n")
+                    if timings:
+                        print(f"{self.lib} average: {(sum(timings) / len(timings)):.4f}ms\n")
+                    else:
+                        print(f"{self.lib} N/A\n")
 
         for body_sz, concurrency, timings in results:
             StatsCollection.save_result(self.lib, body_sz, concurrency, timings)

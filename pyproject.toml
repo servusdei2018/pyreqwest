@@ -63,11 +63,12 @@ dev = [
     "pdoc==16.0.0",
 ]
 bench = [
-    "aiohttp==3.13.3",
     "urllib3==2.6.3",
+    "aiohttp==3.13.3",
     "rnet==2.4.2",
-    "ry==0.0.78",
     "niquests==3.17.0",
+    "ry==0.0.78",
+    "curl-cffi==0.14.0",
     "matplotlib==3.10.8",
 ]
 
