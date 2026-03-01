@@ -9,6 +9,7 @@ target
 /.idea/
 
 /python/pyreqwest/*.so
+/python/pyreqwest/libpyreqwest*
 __pycache__
 
 coverage
