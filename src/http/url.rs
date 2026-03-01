@@ -10,7 +10,7 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use std::net::IpAddr;
 use std::str::FromStr;
 
-#[pyclass(frozen)]
+#[pyclass(frozen, skip_from_py_object)]
 pub struct Url {
     url: url::Url,
     query: PyOnceLock<Vec<(Py<PyString>, Py<PyString>)>>,

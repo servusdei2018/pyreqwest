@@ -29,13 +29,13 @@ def test_init__args(pairs: list[tuple[str, str]], kind: Callable[[list[Any]], An
 
 
 def test_init__bad():
-    with pytest.raises(TypeError, match="'str' object cannot be cast as 'tuple'"):
+    with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
         HeaderMap("invalid")  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="'int' object cannot be cast as 'Mapping'"):
+    with pytest.raises(TypeError, match="'int' object is not an instance of 'Mapping'"):
         HeaderMap(1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="'str' object cannot be cast as 'tuple'"):
+    with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
         HeaderMap(["a"])  # type: ignore[list-item]
-    with pytest.raises(TypeError, match="'int' object cannot be cast as 'str'"):
+    with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
         HeaderMap({"a": 1})  # type: ignore[dict-item]
     with pytest.raises(ValueError, match="failed to parse header value"):
         HeaderMap({"a": "a\n"})

@@ -236,11 +236,11 @@ async def test_default_headers__good(echo_server: SubprocessServer, value: Mappi
 
 
 async def test_default_headers__bad():
-    with pytest.raises(TypeError, match="argument 'headers': 'str' object cannot be cast as 'tuple'"):
+    with pytest.raises(TypeError, match="argument 'headers': 'str' object is not an instance of 'tuple'"):
         ClientBuilder().default_headers(["foo"])  # type: ignore[list-item]
-    with pytest.raises(TypeError, match="argument 'headers': 'int' object cannot be cast as 'str'"):
+    with pytest.raises(TypeError, match="argument 'headers': 'int' object is not an instance of 'str'"):
         ClientBuilder().default_headers({"X-Test": 123})  # type: ignore[dict-item]
-    with pytest.raises(TypeError, match="argument 'headers': 'str' object cannot be cast as 'tuple'"):
+    with pytest.raises(TypeError, match="argument 'headers': 'str' object is not an instance of 'tuple'"):
         ClientBuilder().default_headers("bad")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="invalid HTTP header name"):
         ClientBuilder().default_headers({"X-Test\n": "foo"})

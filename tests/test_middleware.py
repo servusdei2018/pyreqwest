@@ -157,7 +157,7 @@ async def test_bad_middleware(echo_server: SubprocessServer) -> None:
         await next_handler.run(request)
 
     req = build_client(none_return).get(echo_server.url).build()
-    with pytest.raises(TypeError, match="'NoneType' object cannot be cast as 'Response'"):
+    with pytest.raises(TypeError, match="'None' is not an instance of 'Response'"):
         await req.send()
 
 

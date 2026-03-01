@@ -131,9 +131,9 @@ async def test_timeout(client: Client, echo_server: SubprocessServer, server_sle
     else:
         assert await req.send()
 
-    with pytest.raises(TypeError, match="'int' object cannot be cast as 'timedelta'"):
+    with pytest.raises(TypeError, match="'int' object is not an instance of 'timedelta'"):
         client.get(echo_server.url).timeout(1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="'float' object cannot be cast as 'timedelta'"):
+    with pytest.raises(TypeError, match="'float' object is not an instance of 'timedelta'"):
         client.get(echo_server.url).timeout(1.0)  # type: ignore[arg-type]
 
 
@@ -181,13 +181,13 @@ async def test_form_query_invalid(client: Client, echo_server: SubprocessServer,
         assert case == "form"
         return client.get(echo_server.url).form(v)
 
-    with pytest.raises(TypeError, match="'str' object cannot be cast as 'tuple'"):
+    with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
         build("invalid")
     with pytest.raises(TypeError, match="failed to extract"):
         build(None)
-    with pytest.raises(TypeError, match="'str' object cannot be cast as 'tuple'"):
+    with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
         build(["a", "b"])
-    with pytest.raises(TypeError, match="'int' object cannot be cast as 'str'"):
+    with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
         build([(1, "b")])
     with pytest.raises(BuilderError, match="Failed to build request") as e:
         build([("foo", {"a": "b"})]).build()
@@ -213,5 +213,5 @@ async def test_extensions(client: Client, echo_server: SubprocessServer):
 
     with pytest.raises(TypeError, match="failed to extract"):
         client.get(echo_server.url).extensions(1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="'int' object cannot be cast as 'str'"):
+    with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
         client.get(echo_server.url).extensions([(1, "b")])  # type: ignore[list-item]
