@@ -12,6 +12,7 @@ mod response;
 mod runtime;
 
 use pyo3::prelude::*;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::internal::module_utils::{register_collections_abc, register_submodule};
 use crate::internal::types::Method;
@@ -27,7 +28,12 @@ mod pyreqwest {
 
     #[pymodule_init]
     fn init(module: &Bound<'_, PyModule>) -> PyResult<()> {
-        module.add("__version__", env!("CARGO_PKG_VERSION"))
+        let start = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        module.add("__version__", env!("CARGO_PKG_VERSION"))?;
+        module.add("_start_time_ns", start)
     }
 
     #[pymodule]

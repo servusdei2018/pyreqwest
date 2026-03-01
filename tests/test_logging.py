@@ -3,9 +3,11 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
 
+import pyreqwest
 import pytest
 from pyreqwest.client import ClientBuilder
 from pyreqwest.logging import flush_logs
+from pyreqwest.logging._internal import Timestamper
 
 from tests.servers.server_subprocess import SubprocessServer
 from tests.utils import wait_for
@@ -22,7 +24,21 @@ async def test_connection_verbose_logging(
         assert (await client.get(echo_server.url).build().send()).status == 200
 
         if enabled and level <= logging.DEBUG:
-            assert any(rec.name == "reqwest::connect" for rec in caplog.records)
+            target = "reqwest::connect"
+            record = next(rec for rec in caplog.records if rec.name == target)
+            assert (
+                hasattr(record, "_pyreqwest_log_timestamp")
+                and hasattr(record, "_pyreqwest_start_time")
+                and hasattr(record, "_pyreqwest_timestamper_applied")
+                and hasattr(pyreqwest, "_start_time_ns")
+            )
+            assert record._pyreqwest_log_timestamp > 0
+            assert record._pyreqwest_start_time > 0
+            assert record._pyreqwest_start_time == pyreqwest._start_time_ns
+            assert record.created == (record._pyreqwest_log_timestamp / 1e9)
+            assert record.relativeCreated == (record._pyreqwest_log_timestamp - record._pyreqwest_start_time) / 1e6
+            assert record._pyreqwest_timestamper_applied is True
+            assert any(isinstance(f, Timestamper) for f in logging.getLogger(target).filters)
         else:
             assert not caplog.records
 
