@@ -1,12 +1,12 @@
 import asyncio
 import json
 import traceback
-from collections.abc import AsyncGenerator, AsyncIterator, Generator
+from collections.abc import AsyncGenerator, AsyncIterator, Generator, Iterator
 from datetime import timedelta
-from typing import Any
+from typing import Any, Self
 
 import pytest
-from pyreqwest.client import Client, ClientBuilder
+from pyreqwest.client import Client, ClientBuilder, SyncClientBuilder
 from pyreqwest.exceptions import ReadError, ReadTimeoutError
 from pyreqwest.request import RequestBuilder
 from pyreqwest.response import Response
@@ -237,7 +237,7 @@ async def test_body_stream__invalid_gen(client: Client, echo_body_parts_server: 
 
     for case in [async_gen, gen, 1]:
         req = client.post(echo_body_parts_server.url)
-        with pytest.raises(TypeError, match="object is not iterable"):
+        with pytest.raises(TypeError, match="Expected an iterable or async iterable"):
             req.body_stream(case)  # type: ignore[arg-type]
 
 
@@ -314,3 +314,46 @@ async def test_use_after_close(client: Client, echo_body_parts_server: Subproces
     with pytest.raises(RuntimeError, match="Response body reader is closed"):
         await resp.body_reader.read(100)
     assert resp.headers["content-type"] == "application/json"
+
+
+class AnyIter(AsyncIterator[bytes], Iterator[bytes]):
+    def __init__(self) -> None:
+        self._parts = iter([b"sync part 0", b"sync part 1"])
+        self._async_parts = iter([b"async part 0", b"async part 1"])
+
+    def __iter__(self) -> Self:
+        return self
+
+    def __next__(self) -> bytes:
+        return next(self._parts)
+
+    def __aiter__(self) -> Self:
+        return self
+
+    async def __anext__(self) -> bytes:
+        try:
+            return next(self._async_parts)
+        except StopIteration:
+            raise StopAsyncIteration from None
+
+
+async def test_mixed_iterators__async_context(client: Client, echo_body_parts_server: SubprocessServer):
+    async with client.post(echo_body_parts_server.url).body_stream(AnyIter()).build_streamed() as resp:
+        assert await resp.body_reader.read_chunk() == b"sync part 0"
+        assert await resp.body_reader.read_chunk() == b"sync part 1"
+
+    with (
+        SyncClientBuilder().error_for_status(True).build() as sync_client,
+        sync_client.post(echo_body_parts_server.url).body_stream(AnyIter()).build_streamed() as resp,
+    ):
+        assert resp.body_reader.read_chunk() == b"sync part 0"
+        assert resp.body_reader.read_chunk() == b"sync part 1"
+
+
+def test_mixed_iterators__sync_context(client: Client, echo_body_parts_server: SubprocessServer):
+    with (
+        SyncClientBuilder().error_for_status(True).build() as sync_client,
+        sync_client.post(echo_body_parts_server.url).body_stream(AnyIter()).build_streamed() as resp,
+    ):
+        assert resp.body_reader.read_chunk() == b"sync part 0"
+        assert resp.body_reader.read_chunk() == b"sync part 1"

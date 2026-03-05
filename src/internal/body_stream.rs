@@ -2,7 +2,7 @@ use crate::internal::asyncio_coro::BytesCoroWaiter;
 use crate::internal::task_local::{OnceTaskLocal, TaskLocal};
 use bytes::Bytes;
 use futures_util::{FutureExt, Stream};
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::{PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
 use pyo3::{PyTraverseError, PyVisit, intern};
@@ -53,7 +53,7 @@ impl Stream for BodyStream {
 }
 impl BodyStream {
     pub fn new(stream: Bound<PyAny>) -> PyResult<Self> {
-        let is_async = is_async_iter(&stream)?;
+        let is_async = !is_sync_iter(&stream)?;
         Ok(BodyStream {
             is_async,
             py_iter: Some(Self::get_py_iter(&stream, is_async)?.unbind()),
@@ -137,13 +137,20 @@ impl BodyStream {
     }
 
     fn get_py_iter<'py>(stream: &Bound<'py, PyAny>, is_async: bool) -> PyResult<Bound<'py, PyAny>> {
-        if is_async {
+        let iter_init = if is_async {
             static AITER: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-            AITER.import(stream.py(), "builtins", "aiter")?.call1((stream,))
+            AITER.import(stream.py(), "builtins", "aiter")?
         } else {
             static ITER: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-            ITER.import(stream.py(), "builtins", "iter")?.call1((stream,))
-        }
+            ITER.import(stream.py(), "builtins", "iter")?
+        };
+        iter_init.call1((stream,)).map_err(|e| {
+            if !(is_async_iter(stream).unwrap_or_default() || is_sync_iter(stream).unwrap_or_default()) {
+                PyTypeError::new_err("Expected an iterable or async iterable")
+            } else {
+                e
+            }
+        })
     }
 
     fn sentinel(py: Python<'_>) -> PyResult<&Py<PyAny>> {
@@ -188,8 +195,13 @@ impl BodyStream {
 }
 
 fn is_async_iter(obj: &Bound<PyAny>) -> PyResult<bool> {
-    static ASYNC_TYPE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
-    obj.is_instance(ASYNC_TYPE.import(obj.py(), "collections.abc", "AsyncIterable")?)
+    static TYPE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    obj.is_instance(TYPE.import(obj.py(), "collections.abc", "AsyncIterable")?)
+}
+
+fn is_sync_iter(obj: &Bound<PyAny>) -> PyResult<bool> {
+    static TYPE: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
+    obj.is_instance(TYPE.import(obj.py(), "collections.abc", "Iterable")?)
 }
 
 enum StreamWaiter {
