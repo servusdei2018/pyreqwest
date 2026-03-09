@@ -242,8 +242,20 @@ async def test_default_headers(echo_server: SubprocessServer, value: HeadersType
             assert [name.lower(), v] in res["headers"]
 
 
+async def test_default_headers__extends(echo_server: SubprocessServer):
+    async with (
+        ClientBuilder()
+        .default_headers({"X-Foo": "1"})
+        .default_headers({"X-Foo": "2", "X-Bar": "3"})
+        .error_for_status(True)
+        .build() as client
+    ):
+        res = await (await client.get(echo_server.url).build().send()).json()
+        assert [(k, v) for k, v in res["headers"] if "x-" in k] == [("x-foo", "2"), ("x-bar", "3")]
+
+
 @pytest.mark.parametrize("default", [[("X-Test", "foo")], [("X-Test", "foo"), ("X-Test", "foo2")]])
-async def test_default_headers__replaced(echo_server: SubprocessServer, default: list[tuple[str, str]]):
+async def test_default_headers__replaced_from_request(echo_server: SubprocessServer, default: list[tuple[str, str]]):
     async with ClientBuilder().default_headers(default).error_for_status(True).build() as client:
         res = await (await client.get(echo_server.url).build().send()).json()
         assert [(k, v) for k, v in res["headers"] if k == "x-test"] == [(k.lower(), v) for k, v in default]

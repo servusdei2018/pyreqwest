@@ -35,7 +35,7 @@ pub struct BaseClientBuilder {
     max_redirects: Option<usize>,
     http1_lower_case_headers: bool,
     error_for_status: bool,
-    default_headers: Option<HeaderMap>,
+    default_headers: Option<http::HeaderMap>,
     runtime_multithreaded: Option<bool>,
     base_url: Option<Url>,
     connection_verbose: bool,
@@ -88,7 +88,11 @@ impl BaseClientBuilder {
 
     fn default_headers(mut slf: PyRefMut<'_, Self>, headers: HeaderMap) -> PyResult<PyRefMut<'_, Self>> {
         slf.check_inner()?;
-        slf.default_headers = Some(headers);
+        if let Some(default) = slf.default_headers.as_mut() {
+            default.extend(headers.try_take_inner()?);
+        } else {
+            slf.default_headers = Some(headers.try_take_inner()?);
+        }
         Ok(slf)
     }
 

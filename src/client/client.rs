@@ -1,6 +1,6 @@
 use crate::client::internal::ConnectionLimiter;
 use crate::client::internal::Spawner;
-use crate::http::{HeaderMap, Url, UrlType};
+use crate::http::{Url, UrlType};
 use crate::internal::json::JsonHandler;
 use crate::internal::types::Method;
 use crate::logging::logger::flush_logs;
@@ -23,7 +23,7 @@ pub struct BaseClient {
     total_timeout: Option<Duration>,
     connection_limiter: Option<ConnectionLimiter>,
     error_for_status: bool,
-    default_headers: Option<HeaderMap>,
+    default_headers: Option<http::HeaderMap>,
     connection_verbose: bool,
     close_cancellation: CancellationToken,
 }
@@ -58,7 +58,7 @@ impl BaseClient {
         total_timeout: Option<Duration>,
         connection_limiter: Option<ConnectionLimiter>,
         error_for_status: bool,
-        default_headers: Option<HeaderMap>,
+        default_headers: Option<http::HeaderMap>,
         base_url: Option<Url>,
         connection_verbose: bool,
     ) -> Self {
@@ -109,7 +109,7 @@ impl BaseClient {
 
             let reqwest_request_builder = self.client.request(method.0, url);
             let middlewares_next = self.init_middleware_next()?;
-            let default_headers = self.default_headers.as_ref().map(|v| v.try_clone_inner()).transpose()?;
+            let default_headers = self.default_headers.as_ref().cloned();
 
             let mut builder = BaseRequestBuilder::new(
                 reqwest_request_builder,

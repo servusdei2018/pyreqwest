@@ -233,11 +233,16 @@ async def test_form_query_invalid(client: Client, echo_server: SubprocessServer,
         build(None)
     with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
         build(["a", "b"])
-    with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
-        build([(1, "b")])
-    with pytest.raises(BuilderError, match="Failed to build request") as e:
-        build([("foo", {"a": "b"})]).build()
-    assert e.value.details and {"message": "unsupported value"} in (e.value.details["causes"] or [])
+
+    for type_ in [list, dict]:
+        with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
+            build(type_([(1, "b")]))
+        with pytest.raises(BuilderError, match="Failed to build request") as e:
+            build(type_([("foo", {"a": "b"})])).build()
+        assert e.value.details and {"message": "unsupported value"} in (e.value.details["causes"] or [])
+        with pytest.raises(BuilderError, match="Failed to build request") as e:
+            build(type_([("foo", None)])).build()
+        assert e.value.details and {"message": "unsupported value"} in (e.value.details["causes"] or [])
 
 
 async def test_form_fails_with_body_set(client: Client, echo_server: SubprocessServer):
