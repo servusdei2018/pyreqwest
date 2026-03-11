@@ -150,7 +150,7 @@ impl HeaderMap {
 
         self.mut_map(|map| {
             if let Some(other) = other {
-                other.for_each(|(k, v)| insert(map, k, v))?;
+                other.for_each("header", |(k, v)| insert(map, k, v))?;
             }
             if let Some(kwargs) = py_kwargs {
                 kwargs.items().iter().try_for_each(|tup| {
@@ -346,7 +346,7 @@ impl HeaderMap {
     }
 
     fn extend_inner(map: &mut http::HeaderMap, other: KeyValPairs) -> PyResult<()> {
-        other.for_each(|(k, v): (HeaderName, HeaderValue)| {
+        other.for_each("header", |(k, v): (HeaderName, HeaderValue)| {
             map.try_append(k.0, v.0)
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))
                 .map(|_| ())

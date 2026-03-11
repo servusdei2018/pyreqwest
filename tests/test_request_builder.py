@@ -1,7 +1,6 @@
 import base64
-from collections.abc import AsyncGenerator, Mapping, Sequence
+from collections.abc import AsyncGenerator
 from datetime import timedelta
-from typing import Any
 
 import pytest
 import trustme
@@ -9,6 +8,7 @@ from pyreqwest.client import Client, ClientBuilder
 from pyreqwest.exceptions import BuilderError, ConnectTimeoutError, StatusError
 from pyreqwest.http import HeaderMap
 from pyreqwest.request import RequestBuilder
+from pyreqwest.types import FormParams, QueryParams
 
 from tests.servers.server_subprocess import SubprocessServer
 from tests.utils import IS_CI
@@ -112,9 +112,9 @@ async def test_headers(client: Client, echo_server: SubprocessServer):
     assert ["x-test", "foo"] in (await resp.json())["headers"]
     assert ["x-test", "bar"] in (await resp.json())["headers"]
 
-    with pytest.raises(ValueError, match="invalid HTTP header name"):
+    with pytest.raises(ValueError, match="Invalid header key: X-Test\n"):
         client.get(echo_server.url).headers({"X-Test\n": "Val\n"})
-    with pytest.raises(ValueError, match="failed to parse header value"):
+    with pytest.raises(ValueError, match="Invalid header value: Val\n"):
         client.get(echo_server.url).headers({"X-Test": "Val\n"})
 
 
@@ -184,7 +184,7 @@ async def test_timeout(client: Client, echo_server: SubprocessServer, server_sle
 
 
 async def test_query(client: Client, echo_server: SubprocessServer):
-    async def send(arg: Sequence[tuple[str, str]] | Mapping[str, str]) -> list[list[str]]:
+    async def send(arg: QueryParams) -> list[list[str]]:
         resp = await client.get(echo_server.url).query(arg).build().send()
         return (await resp.json())["query"]  # type: ignore[no-any-return]
 
@@ -193,7 +193,9 @@ async def test_query(client: Client, echo_server: SubprocessServer):
         assert (await send(arg_type([("foo", "bar")]))) == [["foo", "bar"]]
         assert (await send(arg_type([("foo", "bar"), ("test", "testing")]))) == [["foo", "bar"], ["test", "testing"]]
         assert (await send(arg_type([("foo", 1)]))) == [["foo", "1"]]
+        assert (await send(arg_type([("foo", 1.0)]))) == [["foo", "1.0"]]
         assert (await send(arg_type([("foo", True)]))) == [["foo", "true"]]
+        assert (await send(arg_type([("foo", True), ("bar", 1)]))) == [["foo", "true"], ["bar", "1"]]
 
     for arg_type in [list, tuple]:
         val = arg_type([("foo", "bar"), ("foo", "baz")])
@@ -202,7 +204,7 @@ async def test_query(client: Client, echo_server: SubprocessServer):
 
 
 async def test_form(client: Client, echo_server: SubprocessServer):
-    async def send(arg: Sequence[tuple[str, str]] | Mapping[str, str]) -> str:
+    async def send(arg: FormParams) -> str:
         resp = await client.get(echo_server.url).form(arg).build().send()
         return "".join((await resp.json())["body_parts"])
 
@@ -211,7 +213,9 @@ async def test_form(client: Client, echo_server: SubprocessServer):
         assert (await send(arg_type([("foo", "bar")]))) == "foo=bar"
         assert (await send(arg_type([("foo", "bar"), ("test", "testing")]))) == "foo=bar&test=testing"
         assert (await send(arg_type([("foo", 1)]))) == "foo=1"
+        assert (await send(arg_type([("foo", 1.0)]))) == "foo=1.0"
         assert (await send(arg_type([("foo", True)]))) == "foo=true"
+        assert (await send(arg_type([("foo", True), ("bar", 1)]))) == "foo=true&bar=1"
 
     for arg_type in [list, tuple]:
         val = arg_type([("foo", "bar"), ("foo", "baz")])
@@ -220,29 +224,27 @@ async def test_form(client: Client, echo_server: SubprocessServer):
 
 
 @pytest.mark.parametrize("case", ["query", "form"])
-async def test_form_query_invalid(client: Client, echo_server: SubprocessServer, case: str):
-    def build(v: Any) -> RequestBuilder:
+async def test_query_form_invalid(client: Client, echo_server: SubprocessServer, case: str):
+    def build(v: QueryParams | FormParams) -> RequestBuilder:
         if case == "query":
             return client.get(echo_server.url).query(v)
         assert case == "form"
         return client.get(echo_server.url).form(v)
 
     with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
-        build("invalid")
+        build("invalid")  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="failed to extract"):
-        build(None)
+        build(None)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
-        build(["a", "b"])
+        build(["a", "b"])  # type: ignore[list-item]
 
     for type_ in [list, dict]:
-        with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
+        with pytest.raises(ValueError, match=f"Invalid {case} key: 1"):
             build(type_([(1, "b")]))
-        with pytest.raises(BuilderError, match="Failed to build request") as e:
+        with pytest.raises(ValueError, match=f"Invalid {case} value: {{'a': 'b'}}"):
             build(type_([("foo", {"a": "b"})])).build()
-        assert e.value.details and {"message": "unsupported value"} in (e.value.details["causes"] or [])
-        with pytest.raises(BuilderError, match="Failed to build request") as e:
+        with pytest.raises(ValueError, match=f"Invalid {case} value: None"):
             build(type_([("foo", None)])).build()
-        assert e.value.details and {"message": "unsupported value"} in (e.value.details["causes"] or [])
 
 
 async def test_form_fails_with_body_set(client: Client, echo_server: SubprocessServer):
@@ -264,5 +266,5 @@ async def test_extensions(client: Client, echo_server: SubprocessServer):
 
     with pytest.raises(TypeError, match="failed to extract"):
         client.get(echo_server.url).extensions(1)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
+    with pytest.raises(ValueError, match="Invalid extensions key: 1"):
         client.get(echo_server.url).extensions([(1, "b")])  # type: ignore[list-item]

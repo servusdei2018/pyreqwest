@@ -20,27 +20,60 @@ pub enum KeyValPairs<'py> {
     Sequence(Bound<'py, PySequence>),
 }
 impl<'py> KeyValPairs<'py> {
-    pub fn for_each<F, K, V>(self, mut f: F) -> PyResult<()>
+    pub fn for_each<F, K, V>(self, ctx: &str, mut f: F) -> PyResult<()>
     where
         F: FnMut((K, V)) -> PyResult<()>,
         for<'a> K: FromPyObject<'a, 'py>,
         for<'a> V: FromPyObject<'a, 'py>,
     {
+        fn extract_error<'py, T>(v: &Bound<'py, PyAny>, ctx: &str, part: &str) -> PyResult<()>
+        where
+            for<'a> T: FromPyObject<'a, 'py>,
+        {
+            v.extract::<T>()
+                .map_err(Into::into)
+                .map_err(|e| {
+                    let err = PyValueError::new_err(format!("Invalid {} {}: {}", ctx, part, v));
+                    err.set_cause(v.py(), Some(e));
+                    err
+                })
+                .map(|_| ())
+        }
+
+        fn error<'py, K, V>(v: Bound<'py, PyAny>, ctx: &str) -> PyResult<()>
+        where
+            for<'a> K: FromPyObject<'a, 'py>,
+            for<'a> V: FromPyObject<'a, 'py>,
+        {
+            let tup = v.extract::<(Bound<'py, PyAny>, Bound<'py, PyAny>)>()?;
+            extract_error::<K>(&tup.0, ctx, "key")?;
+            extract_error::<V>(&tup.1, ctx, "value")
+        }
+
+        fn kv<'py, K, V>(v: Bound<'py, PyAny>, ctx: &str) -> PyResult<(K, V)>
+        where
+            for<'a> K: FromPyObject<'a, 'py>,
+            for<'a> V: FromPyObject<'a, 'py>,
+        {
+            v.extract::<(K, V)>()
+                .map_err(|e| error::<K, V>(v, ctx).err().unwrap_or(e))
+        }
+
         match self {
-            KeyValPairs::Mapping(v) => v.items()?.iter().try_for_each(|v| f(v.extract::<(K, V)>()?)),
-            KeyValPairs::List(v) => v.try_iter()?.try_for_each(|v| f(v?.extract::<(K, V)>()?)),
-            KeyValPairs::Tuple(v) => v.iter().try_for_each(|v| f(v.extract::<(K, V)>()?)),
-            KeyValPairs::Sequence(v) => v.try_iter()?.try_for_each(|v| f(v?.extract::<(K, V)>()?)),
+            KeyValPairs::Mapping(v) => v.items()?.iter().try_for_each(|v| f(kv::<K, V>(v, ctx)?)),
+            KeyValPairs::List(v) => v.try_iter()?.try_for_each(|v| f(kv::<K, V>(v?, ctx)?)),
+            KeyValPairs::Tuple(v) => v.iter().try_for_each(|v| f(kv::<K, V>(v, ctx)?)),
+            KeyValPairs::Sequence(v) => v.try_iter()?.try_for_each(|v| f(kv::<K, V>(v?, ctx)?)),
         }
     }
 
-    pub fn into_vec<K, V>(self) -> PyResult<Vec<(K, V)>>
+    pub fn into_vec<K, V>(self, ctx: &str) -> PyResult<Vec<(K, V)>>
     where
         for<'a> K: FromPyObject<'a, 'py>,
         for<'a> V: FromPyObject<'a, 'py>,
     {
         let mut res = Vec::with_capacity(self.len()?);
-        self.for_each(|(key, value)| {
+        self.for_each(ctx, |(key, value)| {
             res.push((key, value));
             Ok(())
         })?;

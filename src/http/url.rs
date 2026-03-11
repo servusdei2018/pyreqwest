@@ -1,4 +1,4 @@
-use crate::internal::types::QueryParams;
+use crate::internal::types::{QueryParams, QueryValue};
 use pyo3::basic::CompareOp;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -339,9 +339,9 @@ impl Url {
         if let Some(query) = query.map(|q| q.0) {
             let mut pairs = vec![];
             for (key, val) in query.iter() {
-                match val.0.as_array() {
-                    Some(arr) => pairs.extend(arr.iter().map(|v| (key, v))),
-                    None => pairs.push((key, &val.0)),
+                match val {
+                    QueryValue::Array(arr) => pairs.extend(arr.iter().map(|v| (key, v))),
+                    QueryValue::Value(v) => pairs.push((key, v)),
                 }
             }
 

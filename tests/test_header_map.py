@@ -35,11 +35,11 @@ def test_init__bad():
         HeaderMap(1)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="'str' object is not an instance of 'tuple'"):
         HeaderMap(["a"])  # type: ignore[list-item]
-    with pytest.raises(TypeError, match="'int' object is not an instance of 'str'"):
+    with pytest.raises(ValueError, match="Invalid header value: 1"):
         HeaderMap({"a": 1})  # type: ignore[dict-item]
-    with pytest.raises(ValueError, match="failed to parse header value"):
+    with pytest.raises(ValueError, match="Invalid header value: a\n"):
         HeaderMap({"a": "a\n"})
-    with pytest.raises(ValueError, match="invalid HTTP header name"):
+    with pytest.raises(ValueError, match="Invalid header key: a\n"):
         HeaderMap({"a\n": "a"})
 
 
@@ -410,9 +410,9 @@ def test_update(kind: Callable[[list[Any]], Any]):
     assert len(headers) == 3
     assert headers["a"] == "v5" and headers["c"] == "v6"
 
-    with pytest.raises(ValueError, match="invalid HTTP header name"):
+    with pytest.raises(ValueError, match="Invalid header key: a\n"):
         headers.update({"a\n": "v5"})
-    with pytest.raises(ValueError, match="failed to parse header value"):
+    with pytest.raises(ValueError, match="Invalid header value: v5\n"):
         headers.update({"a": "v5\n"})
 
     assert len(headers) == 3
@@ -525,9 +525,9 @@ def test_extend(kind: Callable[[list[Any]], Any]):
     assert headers.getall("c") == ["v3"]
     assert headers.getall("a") == ["v1", "v4"]
 
-    with pytest.raises(ValueError, match="invalid HTTP header name"):
+    with pytest.raises(ValueError, match="Invalid header key: a\n"):
         headers.extend(kind([("a\n", "v1")]))
-    with pytest.raises(ValueError, match="failed to parse header value"):
+    with pytest.raises(ValueError, match="Invalid header value: v1\n"):
         headers.extend(kind([("a", "v1\n")]))
 
     assert len(headers) == 4

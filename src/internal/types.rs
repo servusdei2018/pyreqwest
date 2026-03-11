@@ -8,6 +8,21 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::str::FromStr;
 
+#[derive(FromPyObject, Serialize)]
+#[serde(untagged)]
+pub enum QueryVal {
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    String(String),
+}
+#[derive(FromPyObject, Serialize)]
+#[serde(untagged)]
+pub enum QueryValue {
+    Value(QueryVal),
+    Array(Vec<QueryVal>),
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Method(pub http::Method);
 #[derive(Clone, Eq, PartialEq, Hash)]
@@ -21,8 +36,8 @@ pub struct StatusCode(pub http::StatusCode);
 #[derive(Serialize, Deserialize)]
 pub struct JsonValue(pub serde_json::Value);
 pub struct Extensions(pub Py<PyDict>);
-pub struct QueryParams(pub Vec<(String, JsonValue)>);
-pub struct FormParams(pub Vec<(String, JsonValue)>);
+pub struct QueryParams(pub Vec<(String, QueryValue)>);
+pub struct FormParams(pub Vec<(String, QueryValue)>);
 
 impl<'py> IntoPyObject<'py> for Method {
     type Target = PyString;
@@ -125,13 +140,13 @@ impl PartialOrd for HeaderValue {
 impl<'py> FromPyObject<'_, 'py> for QueryParams {
     type Error = PyErr;
     fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
-        Ok(QueryParams(obj.extract::<KeyValPairs>()?.into_vec()?))
+        Ok(QueryParams(obj.extract::<KeyValPairs>()?.into_vec("query")?))
     }
 }
 impl<'py> FromPyObject<'_, 'py> for FormParams {
     type Error = PyErr;
     fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
-        Ok(FormParams(obj.extract::<KeyValPairs>()?.into_vec()?))
+        Ok(FormParams(obj.extract::<KeyValPairs>()?.into_vec("form")?))
     }
 }
 
@@ -177,7 +192,9 @@ impl<'py> FromPyObject<'_, 'py> for Extensions {
         } else {
             let dict = PyDict::new(obj.py());
             obj.extract::<KeyValPairs>()?
-                .for_each(|(key, value): (Bound<'py, PyString>, Bound<'py, PyAny>)| dict.set_item(key, value))?;
+                .for_each("extensions", |(key, value): (Bound<'py, PyString>, Bound<'py, PyAny>)| {
+                    dict.set_item(key, value)
+                })?;
             Ok(Extensions(dict.unbind()))
         }
     }
