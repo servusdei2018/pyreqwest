@@ -223,7 +223,7 @@ class BaseClientBuilder:
         Same as `.http2(False)`
         """
 
-    def http2(self, enabled: bool) -> Self:
+    def http2(self, enable: bool) -> Self:
         """Enable or disable HTTP/2 support. Default is false. This is consistent with reqwest opt-in http2 feature.
 
         When enabling, it is recommended to tune "http2_" settings for production usage based on expected workloads.
