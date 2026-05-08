@@ -9,7 +9,7 @@ from pyreqwest.request import Request
 
 
 def simple_wsgi_app(
-    environ: dict[str, Any], start_response: Callable[[str, list[tuple[str, str]], Any | None], None]
+    environ: dict[str, Any], start_response: Callable[..., Callable[[bytes], None]]
 ) -> Generator[bytes, None, None]:
     path = environ.get("PATH_INFO", "/")
 

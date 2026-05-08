@@ -1,13 +1,17 @@
 """WSGI middleware."""
 
+import contextlib
 import io
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import unquote
 
 from pyreqwest.middleware import SyncNext
 from pyreqwest.request import Request
 from pyreqwest.response import ResponseBuilder, SyncResponse
+
+if TYPE_CHECKING:
+    from pyreqwest.types import SyncStream
 
 StartResponse = Callable[[str, list[tuple[str, str]], Any | None], Callable[[bytes], None]]
 WSGIApp = Callable[[dict[str, Any], StartResponse], Iterable[bytes]]
@@ -58,9 +62,8 @@ class WSGITestMiddleware:
             headers_set = True
 
             def write(data: bytes) -> None:
-                raise NotImplementedError(
-                    "WSGI write callable is not supported by this test client. Yield bytes from the app instead."
-                )
+                msg = "WSGI write callable is not supported by this test client. Yield bytes from the app instead."
+                raise NotImplementedError(msg)
 
             return write
 
@@ -68,13 +71,12 @@ class WSGITestMiddleware:
 
         iterator = iter(body_iterable)
         first_chunk = None
-        try:
+        with contextlib.suppress(StopIteration):
             first_chunk = next(iterator)
-        except StopIteration:
-            pass
 
         if not headers_set:
-            raise RuntimeError("WSGI app returned without calling start_response")
+            msg = "WSGI app returned without calling start_response"
+            raise RuntimeError(msg)
 
         def stream_wrapper() -> Iterable[bytes]:
             if first_chunk is not None:
@@ -130,7 +132,7 @@ class WSGITestMiddleware:
 
         stream = body.get_stream()
         if stream is not None:
-            chunks = list(stream)
-            return io.BytesIO(b"".join(chunks))
+            sync_stream: SyncStream = stream  # type: ignore[assignment]  # WSGI is always sync
+            return io.BytesIO(b"".join(cast("Iterable[bytes]", sync_stream)))
 
         return io.BytesIO(b"")
