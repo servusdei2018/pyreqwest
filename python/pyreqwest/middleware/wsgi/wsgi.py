@@ -9,7 +9,8 @@ from pyreqwest.middleware import SyncNext
 from pyreqwest.request import Request
 from pyreqwest.response import ResponseBuilder, SyncResponse
 
-WSGIApp = Callable[[dict[str, Any], Callable[[str, list[tuple[str, str]], Any | None], None]], Iterable[bytes]]
+StartResponse = Callable[[str, list[tuple[str, str]], Any | None], Callable[[bytes], None]]
+WSGIApp = Callable[[dict[str, Any], StartResponse], Iterable[bytes]]
 
 
 class WSGITestMiddleware:
@@ -95,7 +96,7 @@ class WSGITestMiddleware:
             "wsgi.version": (1, 0),
             "wsgi.url_scheme": url.scheme or "http",
             "wsgi.input": self._wsgi_input(request),
-            "wsgi.errors": io.BytesIO(),
+            "wsgi.errors": io.StringIO(),
             "wsgi.multithread": False,
             "wsgi.multiprocess": False,
             "wsgi.run_once": False,

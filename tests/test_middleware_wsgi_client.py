@@ -32,7 +32,6 @@ def simple_wsgi_app(
         query_string = environ.get("QUERY_STRING", "")
         body = environ["wsgi.input"].read().decode()
 
-
         resp = {"method": method}
         if headers:
             # Sort headers for stable tests
