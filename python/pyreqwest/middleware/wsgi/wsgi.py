@@ -36,13 +36,14 @@ class WSGITestMiddleware:
         environ = self._request_to_wsgi_environ(request)
 
         response_builder = ResponseBuilder()
-        headers_set: list[Any] = []
+        headers_set: bool = False
 
         def start_response(
             status: str,
             response_headers: list[tuple[str, str]],
             exc_info: Any | None = None,
         ) -> Callable[[bytes], None]:
+            nonlocal headers_set
             if exc_info:
                 try:
                     if headers_set:
@@ -54,7 +55,7 @@ class WSGITestMiddleware:
             status_code = int(status.split(" ", 1)[0])
             response_builder.status(status_code)
             response_builder.headers(response_headers)
-            headers_set.append(True)
+            headers_set = True
 
             def write(data: bytes) -> None:
                 raise NotImplementedError(
