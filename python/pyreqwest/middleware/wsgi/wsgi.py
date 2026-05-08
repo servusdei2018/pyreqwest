@@ -56,7 +56,9 @@ class WSGITestMiddleware:
             headers_set.append(True)
 
             def write(data: bytes) -> None:
-                raise NotImplementedError("WSGI write callable is not supported by this test client. Yield bytes from the app instead.")
+                raise NotImplementedError(
+                    "WSGI write callable is not supported by this test client. Yield bytes from the app instead."
+                )
 
             return write
 
@@ -68,6 +70,9 @@ class WSGITestMiddleware:
             first_chunk = next(iterator)
         except StopIteration:
             pass
+
+        if not headers_set:
+            raise RuntimeError("WSGI app returned without calling start_response")
 
         def stream_wrapper() -> Iterable[bytes]:
             if first_chunk is not None:

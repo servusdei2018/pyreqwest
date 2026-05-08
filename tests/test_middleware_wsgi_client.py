@@ -1,3 +1,4 @@
+import json
 from collections.abc import Callable, Generator
 from typing import Any
 
@@ -7,9 +8,11 @@ from pyreqwest.middleware.wsgi import WSGITestMiddleware
 from pyreqwest.request import Request
 
 
-def simple_wsgi_app(environ: dict[str, Any], start_response: Callable[[str, list[tuple[str, str]], Any | None], None]) -> Generator[bytes, None, None]:
+def simple_wsgi_app(
+    environ: dict[str, Any], start_response: Callable[[str, list[tuple[str, str]], Any | None], None]
+) -> Generator[bytes, None, None]:
     path = environ.get("PATH_INFO", "/")
-    
+
     if path == "/":
         start_response("200 OK", [("Content-Type", "application/json")])
         yield b'{"message": "Hello World"}'
@@ -25,11 +28,11 @@ def simple_wsgi_app(environ: dict[str, Any], start_response: Callable[[str, list
                 headers.append((k[5:].lower().replace("_", "-"), v))
             elif k in ("CONTENT_TYPE", "CONTENT_LENGTH"):
                 headers.append((k.lower().replace("_", "-"), v))
-        
+
         query_string = environ.get("QUERY_STRING", "")
         body = environ["wsgi.input"].read().decode()
-        
-        import json
+
+
         resp = {"method": method}
         if headers:
             # Sort headers for stable tests
@@ -38,7 +41,7 @@ def simple_wsgi_app(environ: dict[str, Any], start_response: Callable[[str, list
             resp["query_string"] = query_string
         if body:
             resp["body"] = body
-            
+
         start_response("200 OK", [("Content-Type", "application/json")])
         yield json.dumps(resp).encode()
     elif path == "/error":
@@ -82,7 +85,7 @@ def test_post_json(wsgi_client: SyncClient):
     data = response.json()
     assert data["method"] == "POST"
     assert "headers" in data
-    import json
+
     assert json.loads(data["body"]) == request_data
 
 
@@ -92,7 +95,7 @@ def test_put_json(wsgi_client: SyncClient):
     data = response.json()
     assert data["method"] == "PUT"
     assert "headers" in data
-    import json
+
     assert json.loads(data["body"]) == {"name": "Jane Doe"}
 
 
@@ -147,7 +150,7 @@ def test_scope_override():
         req.extensions["test"] = "something"
         resp = req.send()
         assert resp.status == 200
-        
+
         headers = resp.json()["headers"]
         assert ["x-test-header", "test-value"] in headers
         assert ["x-added-header", "added-value"] in headers
