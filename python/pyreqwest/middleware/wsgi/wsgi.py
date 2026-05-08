@@ -49,7 +49,7 @@ class WSGITestMiddleware:
                         # Re-raise original exception if headers have already been sent
                         raise exc_info[1].with_traceback(exc_info[2])
                 finally:
-                    exc_info = None
+                    exc_info = None  # avoid dangling circular ref
 
             status_code = int(status.split(" ", 1)[0])
             response_builder.status(status_code)
